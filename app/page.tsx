@@ -37,10 +37,11 @@ export default function SQLBuilder() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const handleDragStartClause = (
-    e: DragEvent<HTMLDivElement>,
+    e: React.DragEvent<HTMLDivElement> | MouseEvent | TouchEvent | PointerEvent,
     clause: string
   ) => {
-    e.dataTransfer.setData("clause", clause);
+    const de = e as unknown as React.DragEvent<HTMLDivElement>;
+    de.dataTransfer?.setData("clause", clause);
   };
 
   const handleDropClause = (e: DragEvent<HTMLDivElement>) => {
