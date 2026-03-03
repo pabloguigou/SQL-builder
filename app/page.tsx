@@ -1,65 +1,166 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
+
+const defaultClauses = [
+  "SELECT",
+  "FROM",
+  "WHERE",
+  "JOIN",
+  "LEFT JOIN",
+  "RIGHT JOIN",
+  "GROUP BY",
+  "HAVING",
+  "ORDER BY",
+  "LIMIT",
+  "OFFSET",
+  "UNION",
+  "CASE WHEN",
+  "AND",
+  "OR"
+];
+
+export default function SQLBuilder() {
+  const [clauses, setClauses] = useState(defaultClauses);
+  const [queryBlocks, setQueryBlocks] = useState([]);
+  const [newClause, setNewClause] = useState("");
+  const [dragIndex, setDragIndex] = useState(null);
+
+  const handleDragStartClause = (e, clause) => {
+    e.dataTransfer.setData("clause", clause);
+  };
+
+  const handleDropClause = (e) => {
+    e.preventDefault();
+    const clause = e.dataTransfer.getData("clause");
+    if (!clause) return;
+
+    setQueryBlocks((prev) => [
+      ...prev,
+      { id: Date.now(), clause, value: "" }
+    ]);
+  };
+
+  const allowDrop = (e) => e.preventDefault();
+
+  const updateValue = (id, value) => {
+    setQueryBlocks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, value } : b))
+    );
+  };
+
+  const removeBlock = (id) => {
+    setQueryBlocks((prev) => prev.filter((b) => b.id !== id));
+  };
+
+  const addClause = () => {
+    if (!newClause.trim()) return;
+    setClauses([...clauses, newClause.toUpperCase()]);
+    setNewClause("");
+  };
+
+  const handleBlockDragStart = (index) => {
+    setDragIndex(index);
+  };
+
+  const handleBlockDrop = (index) => {
+    if (dragIndex === null || dragIndex === index) return;
+
+    const updated = [...queryBlocks];
+    const draggedItem = updated.splice(dragIndex, 1)[0];
+    updated.splice(index, 0, draggedItem);
+
+    setQueryBlocks(updated);
+    setDragIndex(null);
+  };
+
+  const buildSQL = () => {
+    return queryBlocks
+      .map((b) => `${b.clause} ${b.value}`.trim())
+      .join("\n");
+  };
+
+  const copySQL = async () => {
+    await navigator.clipboard.writeText(buildSQL());
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="grid grid-cols-3 gap-4 p-6">
+      <Card className="col-span-1 p-4">
+        <h2 className="text-xl font-bold mb-4">Clauses</h2>
+        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+          {clauses.map((clause, idx) => (
+            <motion.div
+              key={idx}
+              draggable
+              onDragStart={(e) => handleDragStartClause(e, clause)}
+              className="p-2 bg-gray-100 rounded-xl cursor-grab shadow"
+              whileHover={{ scale: 1.03 }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              {clause}
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <Input
+            placeholder="Add new clause"
+            value={newClause}
+            onChange={(e) => setNewClause(e.target.value)}
+          />
+          <Button onClick={addClause} className="w-full">
+            Add Clause
+          </Button>
+        </div>
+      </Card>
+
+      <Card
+        className="col-span-2 p-4 min-h-[500px]"
+        onDrop={handleDropClause}
+        onDragOver={allowDrop}
+      >
+        <h2 className="text-xl font-bold mb-4">Query Playground</h2>
+        <div className="space-y-3">
+          {queryBlocks.map((block, index) => (
+            <motion.div
+              key={block.id}
+              draggable
+              onDragStart={() => handleBlockDragStart(index)}
+              onDragOver={allowDrop}
+              onDrop={() => handleBlockDrop(index)}
+              className="flex gap-2 items-center bg-white p-3 rounded-2xl shadow cursor-move"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <span className="font-semibold min-w-[120px]">
+                {block.clause}
+              </span>
+              <Input
+                placeholder="Add values or custom SQL"
+                value={block.value}
+                onChange={(e) => updateValue(block.id, e.target.value)}
+              />
+              <Button variant="destructive" onClick={() => removeBlock(block.id)}>
+                Remove
+              </Button>
+            </motion.div>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="mt-6">
+          <h3 className="font-bold mb-2">Generated SQL</h3>
+          <pre className="bg-gray-100 p-3 rounded-xl whitespace-pre-wrap">
+            {buildSQL()}
+          </pre>
+          <Button className="mt-2" onClick={copySQL}>
+            Copy SQL
+          </Button>
         </div>
-      </main>
+      </Card>
     </div>
   );
 }
