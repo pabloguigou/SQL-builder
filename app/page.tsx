@@ -1,12 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, DragEvent } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 
-const defaultClauses = [
+type QueryBlock = {
+  id: number;
+  clause: string;
+  value: string;
+};
+
+const defaultClauses: string[] = [
   "SELECT",
   "FROM",
   "WHERE",
@@ -21,39 +27,44 @@ const defaultClauses = [
   "UNION",
   "CASE WHEN",
   "AND",
-  "OR"
+  "OR",
 ];
 
 export default function SQLBuilder() {
-  const [clauses, setClauses] = useState(defaultClauses);
-  const [queryBlocks, setQueryBlocks] = useState([]);
-  const [newClause, setNewClause] = useState("");
-  const [dragIndex, setDragIndex] = useState(null);
+  const [clauses, setClauses] = useState<string[]>(defaultClauses);
+  const [queryBlocks, setQueryBlocks] = useState<QueryBlock[]>([]);
+  const [newClause, setNewClause] = useState<string>("");
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  const handleDragStartClause = (e, clause) => {
+  const handleDragStartClause = (
+    e: DragEvent<HTMLDivElement>,
+    clause: string
+  ) => {
     e.dataTransfer.setData("clause", clause);
   };
 
-  const handleDropClause = (e) => {
+  const handleDropClause = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const clause = e.dataTransfer.getData("clause");
     if (!clause) return;
 
     setQueryBlocks((prev) => [
       ...prev,
-      { id: Date.now(), clause, value: "" }
+      { id: Date.now(), clause, value: "" },
     ]);
   };
 
-  const allowDrop = (e) => e.preventDefault();
+  const allowDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
 
-  const updateValue = (id, value) => {
+  const updateValue = (id: number, value: string) => {
     setQueryBlocks((prev) =>
       prev.map((b) => (b.id === id ? { ...b, value } : b))
     );
   };
 
-  const removeBlock = (id) => {
+  const removeBlock = (id: number) => {
     setQueryBlocks((prev) => prev.filter((b) => b.id !== id));
   };
 
@@ -63,11 +74,11 @@ export default function SQLBuilder() {
     setNewClause("");
   };
 
-  const handleBlockDragStart = (index) => {
+  const handleBlockDragStart = (index: number) => {
     setDragIndex(index);
   };
 
-  const handleBlockDrop = (index) => {
+  const handleBlockDrop = (index: number) => {
     if (dragIndex === null || dragIndex === index) return;
 
     const updated = [...queryBlocks];
@@ -78,7 +89,7 @@ export default function SQLBuilder() {
     setDragIndex(null);
   };
 
-  const buildSQL = () => {
+  const buildSQL = (): string => {
     return queryBlocks
       .map((b) => `${b.clause} ${b.value}`.trim())
       .join("\n");
@@ -144,7 +155,10 @@ export default function SQLBuilder() {
                 value={block.value}
                 onChange={(e) => updateValue(block.id, e.target.value)}
               />
-              <Button variant="destructive" onClick={() => removeBlock(block.id)}>
+              <Button
+                variant="destructive"
+                onClick={() => removeBlock(block.id)}
+              >
                 Remove
               </Button>
             </motion.div>
