@@ -1,0 +1,6 @@
+git init
+git add .
+git commit -m "SQL Builder"
+git branch -M main
+git remote add origin https://github.com/TUUSUARIO/sql-builder.git
+git push -u origin main
